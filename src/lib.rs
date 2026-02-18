@@ -1,5 +1,4 @@
 use std::error::Error;
-use aes::cipher::consts::False;
 use rand::random;
 
 pub mod crypt;

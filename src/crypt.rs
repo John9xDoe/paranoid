@@ -78,3 +78,56 @@ pub fn decrypt_file(filename: &str, key: &[u8], inplace: bool) -> Result<(), Box
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::random;
+    use tempfile::tempdir;
+
+    #[test]
+    fn aes256_cbc_encrypt_decrypt_without_inplace() {
+        let dir = tempdir().unwrap();
+        let filename = dir.path().join("a.bin").to_string_lossy().to_string();
+        let enc = format!("{}.enc", filename);
+
+        let original: Vec<u8> = vec![0, 1, 2, 3, 255, b'h', b'i'];
+        fs::write(&filename, &original).unwrap();
+
+        let key = random::<[u8; 32]>();
+        let iv = random::<[u8; 16]>();
+
+        encrypt_file(&filename, &key, &iv,false).unwrap();
+
+        assert!(fs::metadata(&enc).is_ok());
+        assert!(fs::metadata(&filename).is_ok());
+
+        decrypt_file(&enc, &key, false).unwrap();
+
+        let restored = fs::read(&filename).unwrap();
+        assert_eq!(restored, original);
+    }
+
+    #[test]
+    fn aes256_cbc_encrypt_decrypt_with_inplace() {
+        let dir = tempdir().unwrap();
+        let filename = dir.path().join("a.bin").to_string_lossy().to_string();
+        let enc = format!("{}.enc", filename);
+
+        let original: Vec<u8> = vec![0, 1, 2, 3, 255, b'h', b'i'];
+        fs::write(&filename, &original).unwrap();
+
+        let key = random::<[u8; 32]>();
+        let iv = random::<[u8; 16]>();
+
+        encrypt_file(&filename, &key, &iv, true).unwrap();
+
+        assert!(fs::metadata(&enc).is_ok());
+        assert!(fs::metadata(&filename).is_err());
+
+        decrypt_file(&enc, &key, false).unwrap();
+
+        let restored = fs::read(&filename).unwrap();
+        assert_eq!(restored, original);
+    }
+}
