@@ -1,4 +1,5 @@
 use std::error::Error;
+use aes::cipher::consts::False;
 use rand::random;
 
 pub mod crypt;
@@ -10,12 +11,12 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         let key = [0u8; 32]; // random::<[u8; 32]>();
         let iv = random::<[u8; 16]>();
 
-        encrypt_file(&config.dir, &key, &iv)?;
+        encrypt_file(&config.dir, &key, &iv, config.inplace)?;
         println!("File is encrypted successfully");
         Ok(())
     } else if config.algo == "aes256" && config.mode == "decrypt" {
         let key = [0u8; 32];
-        decrypt_file(&config.dir, &key)?;
+        decrypt_file(&config.dir, &key, config.inplace)?;
         println!("File is decrypted successfully");
         Ok(())
     } else {
@@ -26,13 +27,14 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 pub struct Config {
     dir: String,
     algo: String,
-    mode: String
+    mode: String,
+    inplace: bool,
 }
 
 impl Config {
     pub fn build(args: &[String]) -> Result<Config, &'static str>{
 
-        if args.len() < 3 {
+        if args.len() < 4 {
             eprintln!("Not enough arguments")
         }
 
@@ -40,6 +42,8 @@ impl Config {
         let algo = args[2].clone();
         let mode = args[3].clone();
 
-        Ok(Config { dir, algo, mode })
+        let inplace = args.iter().any(|a| a == "inplace");
+
+        Ok(Config { dir, algo, mode, inplace })
     }
 }

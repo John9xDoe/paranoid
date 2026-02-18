@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use aes::Aes256;
@@ -6,7 +7,7 @@ use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
 
 type Aes256Cbc = Cbc<Aes256, Pkcs7>;
-pub fn encrypt_file(filename: &str, key: &[u8], iv: &[u8]) -> Result<(), Box<dyn Error>> {
+pub fn encrypt_file(filename: &str, key: &[u8], iv: &[u8], inplace: bool) -> Result<(), Box<dyn Error>> {
     let cipher = Aes256Cbc::new_from_slices(key, iv)?;
 
     let mut file = File::open(filename)?;
@@ -24,10 +25,17 @@ pub fn encrypt_file(filename: &str, key: &[u8], iv: &[u8]) -> Result<(), Box<dyn
     output.write_all(&iv)?;
     output.write_all(&encrypted_text)?;
 
+    output.flush()?;
+    output.sync_all()?;
+
+    if inplace {
+        fs::remove_file(filename)?;
+    }
+
     Ok(())
 }
 
-pub fn decrypt_file(filename: &str, key: &[u8]) -> Result<(), Box<dyn Error>> {
+pub fn decrypt_file(filename: &str, key: &[u8], inplace: bool) -> Result<(), Box<dyn Error>> {
     let mut f = std::fs::File::open(filename)?;
     let mut data = Vec::new();
     f.read_to_end(&mut data)?;
@@ -60,6 +68,13 @@ pub fn decrypt_file(filename: &str, key: &[u8]) -> Result<(), Box<dyn Error>> {
         .open(out_name)?;
 
     output.write_all(&decrypted_text)?;
+
+    output.flush()?;
+    output.sync_all()?;
+
+    if inplace {
+        fs::remove_file(filename)?;
+    }
 
     Ok(())
 }
